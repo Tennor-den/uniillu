@@ -25,7 +25,17 @@ def banner():
 
 
 def description():
-    print("Detects non-ASCII characters and highlights visually deceptive Unicode.\n")
+    print("Some domains look normal but are not.")
+    print("They use characters from other languages that look like English letters.\n")
+
+    print("Examples:")
+    print("apple.com        → normal")
+    print("аррӏе.com        → looks the same but is different")
+    print("rnicrosoft.com   → 'rn' looks like 'm'")
+    print("g00gle.com       → '0' looks like 'o'")
+    print("СNN.com          → first letter is not English 'C'\n")
+
+    print("This tool shows those hidden characters and reveals the real ASCII form.\n")
 
 
 # 🔍 Extract domain
