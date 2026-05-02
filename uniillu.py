@@ -4,7 +4,7 @@ import unicodedata
 from urllib.parse import urlparse
 
 TOOL_NAME = "UNiiLLU"
-VERSION = "v0.3"
+VERSION = "v0.5"
 
 
 def banner():
@@ -25,71 +25,39 @@ def banner():
 
 
 def description():
-    print("Detects deceptive domains that look real but are not.\n")
+    print("Detects deceptive domains that visually imitate legitimate ones.\n")
 
 
-# 🔍 Known brands for impersonation detection
-COMMON_BRANDS = [
-    "google",
-    "microsoft",
-    "apple",
-    "amazon",
-    "facebook",
-    "paypal",
-    "netflix"
-]
+# 🔧 Normalize visual tricks
+def normalize_domain(name):
+    replacements = {
+        "rn": "m",
+        "vv": "w",
+        "cl": "d",
+        "0": "o",
+        "1": "l",
+        "3": "e",
+        "@": "a"
+    }
+
+    normalized = name
+    for fake, real in replacements.items():
+        normalized = normalized.replace(fake, real)
+
+    return normalized
 
 
-# 🔍 Levenshtein distance (string similarity)
-def levenshtein(a, b):
-    if len(a) < len(b):
-        return levenshtein(b, a)
-
-    if len(b) == 0:
-        return len(a)
-
-    previous_row = range(len(b) + 1)
-
-    for i, c1 in enumerate(a):
-        current_row = [i + 1]
-        for j, c2 in enumerate(b):
-            insertions = previous_row[j + 1] + 1
-            deletions = current_row[j] + 1
-            substitutions = previous_row[j] + (c1 != c2)
-            current_row.append(min(insertions, deletions, substitutions))
-        previous_row = current_row
-
-    return previous_row[-1]
-
-
-# 🔍 Detect impersonation
-def detect_impersonation(domain):
-    name = domain.split('.')[0]
-
-    for brand in COMMON_BRANDS:
-        distance = levenshtein(name, brand)
-
-        if distance <= 2 and name != brand:
-            print(f"[!] Possible impersonation → {name} ≈ {brand}")
-
-
-# 🔍 Detect script
+# 🔍 Script detection
 def detect_script(char):
     try:
         name = unicodedata.name(char)
 
         if "LATIN" in name:
-            if ord(char) < 128:
-                return "Latin (ASCII)"
-            else:
-                return "Latin (Extended)"
-
+            return "Latin (ASCII)" if ord(char) < 128 else "Latin (Extended)"
         elif "CYRILLIC" in name:
             return "Cyrillic"
-
         elif "GREEK" in name:
             return "Greek"
-
         else:
             return "Other"
 
@@ -97,15 +65,13 @@ def detect_script(char):
         return "Unknown"
 
 
-# 🔍 Confusable Unicode chars
+# 🔍 Confusable Unicode characters
 def is_confusable(char):
-    confusables = {
-        'ɑ', 'а', 'е', 'ο', 'і', 'ӏ', 'ѕ', 'ԁ', 'ԛ'
-    }
+    confusables = {'ɑ', 'а', 'е', 'ο', 'і', 'ӏ', 'ѕ', 'ԁ', 'ԛ'}
     return char in confusables
 
 
-# 🔍 ASCII illusion detection
+# 🔍 ASCII illusions
 def detect_ascii_illusion(domain):
     patterns = {
         "rn": "m",
@@ -128,12 +94,11 @@ def detect_ascii_illusion(domain):
 def extract_domain(input_text):
     if "@" in input_text:
         return input_text.split("@")[-1]
-    else:
-        parsed = urlparse(input_text)
-        return parsed.netloc if parsed.netloc else input_text
+    parsed = urlparse(input_text)
+    return parsed.netloc if parsed.netloc else input_text
 
 
-# 🔍 Main analysis
+# 🔍 Core analysis
 def analyze_domain(domain):
     print(f"\n[+] Target: {domain}\n")
 
@@ -148,7 +113,6 @@ def analyze_domain(domain):
             if is_confusable(char):
                 confusable_found.append(char)
 
-    # Show scripts
     for script, chars in scripts_used.items():
         print(f"{script}: {''.join(chars)}")
 
@@ -161,16 +125,20 @@ def analyze_domain(domain):
         print("[!] Non-ASCII Latin detected → possible spoofing")
 
     if confusable_found:
-        print(f"[!] Confusable characters found → {''.join(confusable_found)}")
+        print(f"[!] Confusable characters → {''.join(confusable_found)}")
 
     ascii_issues = detect_ascii_illusion(domain)
     if ascii_issues:
-        print("[!] ASCII visual tricks detected:")
+        print("[!] ASCII visual tricks:")
         for fake, real in ascii_issues:
-            print(f"    '{fake}' may mimic '{real}'")
+            print(f"    '{fake}' → '{real}'")
 
-    # 🔥 New feature
-    detect_impersonation(domain)
+    # 🔥 Core upgrade: normalization insight
+    name = domain.split('.')[0]
+    normalized = normalize_domain(name)
+
+    if normalized != name:
+        print(f"[!] Normalized form → {normalized}")
 
     if len(scripts_used) == 1 and not confusable_found and not ascii_issues:
         print("[+] Looks normal")
@@ -183,7 +151,7 @@ if __name__ == "__main__":
 
     while True:
         try:
-            user_input = input("Enter URL/email (or 'exit' to quit): ").strip()
+            user_input = input("Enter URL/email (or 'exit'): ").strip()
 
             if user_input.lower() in ["exit", "quit"]:
                 print("\nExiting UNiiLLU...")
