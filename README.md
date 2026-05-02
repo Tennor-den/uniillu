@@ -6,42 +6,21 @@ Unicode Illusion Scanner
 
 ## Description
 
-UNiiLLU is a simple tool built to catch something most people miss: fake domains that look real. Attackers replace normal letters with similar Unicode characters and create URLs or email domains that appear legitimate at first glance.
+UNiiLLU is a focused tool designed to expose deceptive domain names that appear legitimate at first glance. Attackers often manipulate characters using Unicode or subtle ASCII tricks to create domains that visually mimic trusted ones.
 
-This tool scans those domains, breaks down each character, and points out anything unusual or deceptive. The goal is simple. Help you see what your eyes miss so you don’t get fooled by something that only pretends to be trustworthy.
+This tool breaks down domain structure, highlights unusual character usage, and reveals normalized forms to help you understand what a domain is trying to resemble.
+
+The goal is simple. Help you see what your eyes miss.
 
 ---
 
 ## Features
 
-* Detect Unicode script mixing
-* Identify confusable characters
-* Detect ASCII visual tricks (rn → m, vv → w)
-* Works with URLs and email domains
+* Unicode script detection (Latin, Cyrillic, Greek)
+* Detection of confusable characters
+* ASCII visual trick detection (rn → m, 0 → o)
+* Domain normalization insight
 * Interactive CLI mode
-
----
-
-## Installation
-
-```bash
-git clone https://github.com/your-username/uniillu.git
-cd uniillu
-```
-
----
-
-## Usage
-
-```bash
-python uniillu.py
-```
-
-or
-
-```bash
-python uniillu.py example.com
-```
 
 ---
 
@@ -51,8 +30,23 @@ Input:
 rnicrosoft.com
 
 Output:
-[!] ASCII visual tricks detected:
-'rn' may mimic 'm'
+[!] ASCII visual tricks:
+'rn' → 'm'
+[!] Normalized form → microsoft
+
+---
+
+## Why it matters
+
+Modern phishing attacks rely on visual deception rather than obvious errors. Domains can look legitimate while being structurally different. UNiiLLU helps reveal those differences clearly.
+
+---
+
+## Usage
+
+```bash
+python uniillu.py
+```
 
 ---
 
