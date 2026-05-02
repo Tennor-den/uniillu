@@ -1,52 +1,67 @@
 # UNiiLLU
 
-Unicode Illusion Scanner
+Unicode illusion scanner
 
 ---
 
 ## Description
 
-UNiiLLU is a focused tool designed to expose deceptive domain names that appear legitimate at first glance. Attackers often manipulate characters using Unicode or subtle ASCII tricks to create domains that visually mimic trusted ones.
+UNiiLLU helps you spot domain names that look normal but are not. Some domains use Unicode characters that look the same as English letters. People see one thing but the computer reads something else.
 
-This tool breaks down domain structure, highlights unusual character usage, and reveals normalized forms to help you understand what a domain is trying to resemble.
-
-The goal is simple. Help you see what your eyes miss.
+This tool shows those hidden characters and reveals what the domain actually says.
 
 ---
 
-## Features
+## What it does
 
-* Unicode script detection (Latin, Cyrillic, Greek)
-* Detection of confusable characters
-* ASCII visual trick detection (rn → m, 0 → o)
-* Domain normalization insight
-* Interactive CLI mode
-
----
-
-## Example
-
-Input:
-rnicrosoft.com
-
-Output:
-[!] ASCII visual tricks:
-'rn' → 'm'
-[!] Normalized form → microsoft
+* Checks if a domain uses only standard ASCII characters
+* Detects non ASCII characters inside the domain
+* Highlights characters that look like English letters
+* Shows the real Unicode identity of each suspicious character
+* Reveals a clean ASCII version of the domain
 
 ---
 
 ## Why it matters
 
-Modern phishing attacks rely on visual deception rather than obvious errors. Domains can look legitimate while being structurally different. UNiiLLU helps reveal those differences clearly.
+A domain can look safe but still be fake. Attackers use characters from other languages that look identical to English letters.
+
+Example
+apple.com is safe
+аррӏе.com looks the same but is not
+
+UNiiLLU helps you see that difference clearly.
+
+---
+
+## Example
+
+Input
+аррӏе.com
+
+Output
+Unicode detected
+Characters are not standard ASCII
+Revealed ASCII form → apple
+High risk
 
 ---
 
 ## Usage
 
+Run the tool
+
 ```bash
 python uniillu.py
 ```
+
+Enter a domain or email when asked.
+
+---
+
+## Notes
+
+This tool focuses on Unicode deception. It does not depend on brand names or wordlists. It works on any domain.
 
 ---
 
