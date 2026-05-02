@@ -4,7 +4,7 @@ import unicodedata
 from urllib.parse import urlparse
 
 TOOL_NAME = "UNiiLLU"
-VERSION = "v0.5"
+VERSION = "v0.7"
 
 
 def banner():
@@ -18,76 +18,14 @@ def banner():
 
                 U N i i L L U
 
-[ Unicode Illusion Scanner ]
+[ ASCII vs Unicode Analyzer ]
 [ Author: TenzinNorden.T ]
 ----------------------------------------------------
 """)
 
 
 def description():
-    print("Detects deceptive domains that visually imitate legitimate ones.\n")
-
-
-# 🔧 Normalize visual tricks
-def normalize_domain(name):
-    replacements = {
-        "rn": "m",
-        "vv": "w",
-        "cl": "d",
-        "0": "o",
-        "1": "l",
-        "3": "e",
-        "@": "a"
-    }
-
-    normalized = name
-    for fake, real in replacements.items():
-        normalized = normalized.replace(fake, real)
-
-    return normalized
-
-
-# 🔍 Script detection
-def detect_script(char):
-    try:
-        name = unicodedata.name(char)
-
-        if "LATIN" in name:
-            return "Latin (ASCII)" if ord(char) < 128 else "Latin (Extended)"
-        elif "CYRILLIC" in name:
-            return "Cyrillic"
-        elif "GREEK" in name:
-            return "Greek"
-        else:
-            return "Other"
-
-    except ValueError:
-        return "Unknown"
-
-
-# 🔍 Confusable Unicode characters
-def is_confusable(char):
-    confusables = {'ɑ', 'а', 'е', 'ο', 'і', 'ӏ', 'ѕ', 'ԁ', 'ԛ'}
-    return char in confusables
-
-
-# 🔍 ASCII illusions
-def detect_ascii_illusion(domain):
-    patterns = {
-        "rn": "m",
-        "vv": "w",
-        "cl": "d",
-        "0": "o",
-        "1": "l",
-        "l": "i"
-    }
-
-    found = []
-    for fake, real in patterns.items():
-        if fake in domain:
-            found.append((fake, real))
-
-    return found
+    print("Detects non-ASCII characters and highlights visually deceptive Unicode.\n")
 
 
 # 🔍 Extract domain
@@ -98,50 +36,89 @@ def extract_domain(input_text):
     return parsed.netloc if parsed.netloc else input_text
 
 
+# 🔍 Confusable characters (visually deceptive)
+def is_confusable(char):
+    return char in {
+        # Cyrillic lookalikes
+        'а','е','о','р','с','і','ӏ','ѕ',
+        'А','В','С','Е','Н','К','М','О','Р','Т','Х',
+
+        # Greek lookalikes
+        'ο','Ο','α',
+
+        # Latin extended lookalikes
+        'ɑ'
+    }
+
+
+# 🔧 Normalize Unicode → ASCII (reveal truth)
+def normalize_unicode(text):
+    mapping = {
+        # Cyrillic
+        'а': 'a','е': 'e','о': 'o','р': 'p','с': 'c',
+        'у': 'y','х': 'x','і': 'i','ӏ': 'l','ѕ': 's',
+
+        'А': 'A','В': 'B','С': 'C','Е': 'E','Н': 'H',
+        'К': 'K','М': 'M','О': 'O','Р': 'P','Т': 'T','Х': 'X',
+
+        # Greek
+        'ο': 'o','Ο': 'O','α': 'a',
+
+        # Latin extended
+        'ɑ': 'a'
+    }
+
+    return ''.join(mapping.get(c, c) for c in text)
+
+
 # 🔍 Core analysis
 def analyze_domain(domain):
-    print(f"\n[+] Target: {domain}\n")
+    print(f"\n[+] Target: {domain}")
 
-    scripts_used = {}
-    confusable_found = []
-
-    for char in domain:
-        if char.isalnum():
-            script = detect_script(char)
-            scripts_used.setdefault(script, []).append(char)
-
-            if is_confusable(char):
-                confusable_found.append(char)
-
-    for script, chars in scripts_used.items():
-        print(f"{script}: {''.join(chars)}")
-
-    print("\n[+] Analysis:")
-
-    if len(scripts_used) > 1:
-        print("[!] Mixed scripts detected → HIGH RISK")
-
-    if "Latin (Extended)" in scripts_used:
-        print("[!] Non-ASCII Latin detected → possible spoofing")
-
-    if confusable_found:
-        print(f"[!] Confusable characters → {''.join(confusable_found)}")
-
-    ascii_issues = detect_ascii_illusion(domain)
-    if ascii_issues:
-        print("[!] ASCII visual tricks:")
-        for fake, real in ascii_issues:
-            print(f"    '{fake}' → '{real}'")
-
-    # 🔥 Core upgrade: normalization insight
     name = domain.split('.')[0]
-    normalized = normalize_domain(name)
+
+    found_unicode = False
+    found_confusable = False
+
+    print("\n[+] Inspection:")
+
+    for char in name:
+        code = ord(char)
+
+        if code < 128:
+            continue
+
+        found_unicode = True
+
+        try:
+            uname = unicodedata.name(char)
+        except ValueError:
+            uname = "UNKNOWN"
+
+        print(f"[!] Unicode → '{char}' ({uname}, U+{code:04X})")
+
+        if is_confusable(char):
+            found_confusable = True
+            print("    [!] Visually confusable with ASCII")
+
+    if not found_unicode:
+        print("[+] All characters are standard ASCII")
+
+    # 🔥 Reveal true form
+    normalized = normalize_unicode(name)
 
     if normalized != name:
-        print(f"[!] Normalized form → {normalized}")
+        print(f"\n[!] Revealed ASCII form → {normalized}")
 
-    if len(scripts_used) == 1 and not confusable_found and not ascii_issues:
-        print("[+] Looks normal")
+    # 🔥 Final judgement
+    print("\n[+] Conclusion:")
+
+    if found_confusable:
+        print("[!] High risk → visually deceptive Unicode detected")
+    elif found_unicode:
+        print("[!] Non-ASCII present → review required")
+    else:
+        print("[+] Clean ASCII domain")
 
 
 # 🚀 Main loop
