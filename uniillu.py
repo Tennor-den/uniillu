@@ -4,11 +4,11 @@ import unicodedata
 from urllib.parse import urlparse
 
 TOOL_NAME = "UNiiLLU"
-VERSION = "v0.9"
+VERSION = "v1.0"
 
 
 def banner():
-    print(r"""
+    print(rf"""
         ██╗   ██╗███╗   ██╗██╗██╗     ██╗     ██╗   ██╗
         ██║   ██║████╗  ██║██║██║     ██║     ██║   ██║
         ██║   ██║██╔██╗ ██║██║██║     ██║     ██║   ██║
@@ -16,7 +16,7 @@ def banner():
         ╚██████╔╝██║ ╚████║██║███████╗███████╗╚██████╔╝
          ╚═════╝ ╚═╝  ╚═══╝╚═╝╚══════╝╚══════╝ ╚═════╝ 
 
-                U N i i L L U
+                {TOOL_NAME}  {VERSION}
 
 [ ASCII vs Unicode Analyzer ]
 [ Author: TenzinNorden.T ]
@@ -26,7 +26,7 @@ def banner():
 
 def description():
     print("Some domains look normal but are not.")
-    print("They use characters from other languages or tricks that look like English.\n")
+    print("They may use hidden characters or simple tricks that look like English.\n")
 
     print("Examples:")
     print("apple.com        → normal")
@@ -35,10 +35,9 @@ def description():
     print("g00gle.com       → '0' looks like 'o'")
     print("СNN.com          → first letter is not English 'C'\n")
 
-    print("This tool reveals what is actually being used.\n")
+    print("This tool shows what is actually being used.\n")
 
 
-# 🔍 Extract domain
 def extract_domain(input_text):
     if "@" in input_text:
         return input_text.split("@")[-1]
@@ -46,130 +45,101 @@ def extract_domain(input_text):
     return parsed.netloc if parsed.netloc else input_text
 
 
-# 🔍 Unicode confusable detection
-def is_confusable(char):
-    return char in {
-        'а','е','о','р','с','і','ӏ','ѕ',
-        'А','В','С','Е','Н','К','М','О','Р','Т','Х',
-        'ο','Ο','α',
-        'ɑ'
-    }
+LOOKALIKE_MAP = {
+    'а':'a','е':'e','о':'o','р':'p','с':'c',
+    'і':'i','ӏ':'l','ѕ':'s',
+    'А':'A','В':'B','С':'C','Е':'E','Н':'H',
+    'К':'K','М':'M','О':'O','Р':'P','Т':'T','Х':'X',
+    'ο':'o','Ο':'O','α':'a',
+    'ɑ':'a'
+}
 
 
-# 🔧 Normalize Unicode → ASCII
+ASCII_MAP = {
+    "rn": ("m", "'rn' is two letters that can look like 'm'"),
+    "vv": ("w", "'vv' is two letters that can look like 'w'"),
+    "cl": ("d", "'cl' can look like 'd'"),
+    "0": ("o", "'0' is a number that looks like 'o'"),
+    "1": ("l", "'1' is a number that can look like 'l' or 'i'"),
+    "3": ("e", "'3' can look like 'e'"),
+    "5": ("s", "'5' can look like 's'")
+}
+
+
 def normalize_unicode(text):
-    mapping = {
-        'а':'a','е':'e','о':'o','р':'p','с':'c',
-        'у':'y','х':'x','і':'i','ӏ':'l','ѕ':'s',
-        'А':'A','В':'B','С':'C','Е':'E','Н':'H',
-        'К':'K','М':'M','О':'O','Р':'P','Т':'T','Х':'X',
-        'ο':'o','Ο':'O','α':'a',
-        'ɑ':'a'
-    }
-    return ''.join(mapping.get(c, c) for c in text)
+    return ''.join(LOOKALIKE_MAP.get(c, c) for c in text)
 
 
-# 🔧 Normalize ASCII tricks
 def normalize_ascii(text):
-    replacements = {
-        "rn": "m",
-        "vv": "w",
-        "cl": "d",
-        "0": "o",
-        "1": "l",
-        "3": "e",
-        "5": "s"
-    }
-
     result = text
-    for fake, real in replacements.items():
+    for fake, (real, _) in ASCII_MAP.items():
         result = result.replace(fake, real)
-
     return result
 
 
-# 🔍 Human-readable ASCII trick detection
-def detect_ascii_tricks(text):
-    patterns = {
-        "rn": ("m", "'rn' is two letters that can look like 'm'"),
-        "vv": ("w", "'vv' is two letters that can look like 'w'"),
-        "cl": ("d", "'cl' can look like 'd'"),
-        "0":  ("o", "'0' is a number that looks like 'o'"),
-        "1":  ("l", "'1' is a number that can look like 'l' or 'i'"),
-        "3":  ("e", "'3' can look like 'e'"),
-        "5":  ("s", "'5' can look like 's'")
-    }
-
+def detect_ascii(text):
     found = []
-    for fake, (real, explanation) in patterns.items():
+    for fake, (real, explanation) in ASCII_MAP.items():
         if fake in text:
-            found.append((fake, real, explanation))
-
+            found.append(explanation)
     return found
 
 
-# 🔍 Main analysis
-def analyze_domain(domain):
+def check_case(text):
+    if text != text.lower():
+        return "Capital letters used (does not affect domain)"
+    else:
+        return "All lowercase (clean)"
+
+
+def analyze(domain):
     print(f"\n[+] Target: {domain}")
 
     name = domain.split('.')[0]
 
-    found_unicode = False
-    found_confusable = False
+    unicode_found = False
+    confusable_found = False
 
     print("\n[+] Inspection:")
 
     for char in name:
-        code = ord(char)
+        if ord(char) > 127:
+            unicode_found = True
 
-        if code < 128:
-            continue
+            print(f"[!] '{char}' is not a normal English letter")
 
-        found_unicode = True
+            if char in LOOKALIKE_MAP:
+                confusable_found = True
+                print(f"    It looks like '{LOOKALIKE_MAP[char]}'")
 
-        try:
-            uname = unicodedata.name(char)
-        except ValueError:
-            uname = "UNKNOWN"
-
-        print(f"[!] Unicode → '{char}' ({uname}, U+{code:04X})")
-
-        if is_confusable(char):
-            found_confusable = True
-            print("    [!] Visually confusable with ASCII")
-
-    if not found_unicode:
+    if not unicode_found:
         print("[+] All characters are standard ASCII")
 
-    # 🔍 ASCII tricks
-    ascii_issues = detect_ascii_tricks(name)
+    ascii_issues = detect_ascii(name)
     if ascii_issues:
-        print("\n[!] ASCII visual tricks:")
-        for _, _, explanation in ascii_issues:
-            print(f"    {explanation}")
+        print("\n[!] Tricks found:")
+        for e in ascii_issues:
+            print(f"    {e}")
 
-    # 🔥 Normalize
-    unicode_norm = normalize_unicode(name)
-    ascii_norm = normalize_ascii(unicode_norm)
+    step1 = normalize_unicode(name)
+    step2 = normalize_ascii(step1)
 
-    if unicode_norm != name:
-        print(f"\n[!] Unicode normalized → {unicode_norm}")
+    if step2 != name:
+        print(f"\n[!] Real form → {step2}")
 
-    if ascii_norm != unicode_norm:
-        print(f"[!] ASCII normalized → {ascii_norm}")
+    print("\n[+] Case:")
+    print(f"    {check_case(name)}")
 
-    # 🔍 Conclusion
-    print("\n[+] Conclusion:")
+    print("\n[+] Result:")
 
-    if found_confusable or ascii_issues:
-        print("[!] High risk → deceptive characters detected")
-    elif found_unicode:
-        print("[!] Non-ASCII present → review required")
+    if confusable_found or ascii_issues:
+        print("[!] This domain can trick people")
+    elif unicode_found:
+        print("[!] Unusual characters found")
     else:
-        print("[+] Clean ASCII domain")
+        print("[+] Looks clean")
 
 
-# 🚀 Main loop
 if __name__ == "__main__":
     banner()
     description()
@@ -186,7 +156,7 @@ if __name__ == "__main__":
                 continue
 
             domain = extract_domain(user_input)
-            analyze_domain(domain)
+            analyze(domain)
 
         except KeyboardInterrupt:
             print("\n\nInterrupted. Exiting UNiiLLU...")
